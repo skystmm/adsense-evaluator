@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, CheckCircle, AlertTriangle, Lightbulb, ArrowRight, Loader2, BarChart3, Clock, TrendingUp } from 'lucide-react';
+import { Search, CheckCircle, AlertTriangle, Lightbulb, ArrowRight, Loader2, BarChart3, Clock, TrendingUp, LogOut, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { isAuthenticated, getUserEmail, logout, getAuthHeaders } from '@/lib/auth';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -14,6 +16,20 @@ export default function Home() {
   const [error, setError] = useState('');
   const [useAI, setUseAI] = useState(true);
   const [usePlaywright, setUsePlaywright] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsLoggedIn(isAuthenticated());
+    setUserEmail(getUserEmail());
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    setIsLoggedIn(false);
+    setUserEmail(null);
+    router.refresh();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,9 +50,7 @@ export default function Home() {
       // 调用后端 API 进行评估
       const response = await fetch(`${API_BASE_URL}/api/evaluate/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           url: url,
           include_ai_analysis: useAI,
@@ -69,7 +83,7 @@ export default function Home() {
             <CheckCircle className="w-8 h-8 text-primary-600" />
             <h1 className="text-xl font-bold text-gray-900">AdSense 评估工具</h1>
           </div>
-          <nav className="flex gap-6">
+          <nav className="flex items-center gap-6">
             <a href="/history" className="text-gray-600 hover:text-gray-900 flex items-center gap-1">
               <Clock className="w-4 h-4" />
               历史记录
@@ -78,6 +92,33 @@ export default function Home() {
               <BarChart3 className="w-4 h-4" />
               统计
             </a>
+            {isLoggedIn ? (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <User className="w-4 h-4" />
+                  <span>{userEmail}</span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-gray-600 hover:text-gray-900 flex items-center gap-1 text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  退出
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-4">
+                <Link href="/login" className="text-gray-600 hover:text-gray-900 flex items-center gap-1 text-sm">
+                  登录
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+                >
+                  注册
+                </Link>
+              </div>
+            )}
           </nav>
         </div>
       </header>
